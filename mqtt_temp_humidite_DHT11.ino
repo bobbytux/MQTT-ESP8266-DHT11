@@ -185,7 +185,7 @@ void reconnect() {
     // serializeJson(root, JsonStr);
     if (serializeJson(root, messageOut) == 0) {
         Serial.println("*** Erreur lors de la création du message de connexion pour Domoticz");
-      } else  {
+    } else  {
 
         // Convertion du message en Char pour envoi dans les Log Domoticz.
         //char JsonStrChar[JsonStr.length()+1];
@@ -194,7 +194,8 @@ void reconnect() {
         messageOut.toCharArray(messageChar,messageOut.length()+1);
         // client.publish(topicOut, JsonStrChar);
         client.publish(topicOut, messageChar);
-
+    }
+   
     // On souscrit
     client.subscribe("#");
     } else {
