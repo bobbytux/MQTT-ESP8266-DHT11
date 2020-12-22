@@ -168,31 +168,38 @@ void reconnect() {
     Serial.println("connecté");
       
     // Connexion effectuée, publication d'un message...
+   
     String message = "Connexion MQTT de "+ nomModule + " (ID : " + clientId + ")";
-    char messageChar[message.length()+1];
-    message.toCharArray(messageChar,message.length()+1);
+    // char messageChar[message.length()+1];
+    // message.toCharArray(messageChar,message.length()+1);
       
     const int capacity = JSON_OBJECT_SIZE(2);
     StaticJsonDocument<capacity> root;
  
     // On renseigne les variables.
     root["command"] = "addlogmessage";
-    root["message"] = (const char *) messageChar;
+    root["message"] = message; // (const char *) messageChar;
       
     // On sérialise la variable JSON
-    String JsonStr;
-    serializeJson(root, JsonStr);
+    String messageOut; // JsonStr;
+    // serializeJson(root, JsonStr);
+    if (serializeJson(root, messageOut) == 0) {
+        Serial.println("*** Erreur lors de la création du message de connexion pour Domoticz");
+      } else  {
 
-    // Convertion du message en Char pour envoi dans les Log Domoticz.
-    char JsonStrChar[JsonStr.length()+1];
-    JsonStr.toCharArray(JsonStrChar,JsonStr.length()+1);
-    client.publish(topicOut, JsonStrChar);
+        // Convertion du message en Char pour envoi dans les Log Domoticz.
+        //char JsonStrChar[JsonStr.length()+1];
+        char messageChar[messageOut.length()+1];
+        // JsonStr.toCharArray(JsonStrChar,JsonStr.length()+1);
+        messageOut.toCharArray(messageChar,messageOut.length()+1);
+        // client.publish(topicOut, JsonStrChar);
+        client.publish(topicOut, messageChar);
 
     // On souscrit
     client.subscribe("#");
     } else {
       Serial.print("Erreur, rc=");
-      Serial.print(client.state());
+      Serial.println(client.state());
       Serial.println(" prochaine tentative dans 5s");
       // Pause de 5 secondes
       delay(5000);
