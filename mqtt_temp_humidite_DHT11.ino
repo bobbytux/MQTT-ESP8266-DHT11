@@ -1,7 +1,7 @@
 
 /*
  ESP8266 MQTT - Relevé de température et humidité via DHT11
- Création Dominique PAUL modifié par Pascal Courtonne
+ Création Dominique PAUL. Modifié par Pascal Courtonne
  Dépot Github : https://github.com/DomoticDIY/MQTT-ModuleDHT11
   Chaine YouTube du Tuto Vidéo : https://www.youtube.com/c/DomoticDIY
  
@@ -47,19 +47,19 @@ String nomModule = "Température & Humidité";          // Nom usuel de ce modul
 // Définitions liées à Domoticz et MQTT
 // ------------------------------------
 
-char*       topicIn =   "domoticz/out";       // Nom du topic envoyé par Domoticz
-char*       topicOut =  "domoticz/in";        // Nom du topic écouté par Domoticz
-int         idxDevice = 42;                   // Index du device dans Domoticz.
-const char* mqtt_server = "MQTT_BROKER_IP";   // Adresse IP ou DNS du Broker MQTT.
-const int   mqtt_port = 1883;                 // Port du Brocker MQTT
-const char* mqtt_login = "MQTT_LOGIN";        // Login de connexion à MQTT.
-const char* mqtt_password = "MQTT_PASSWD";    // Mot de passe de connexion à MQTT.
+char*       topicIn =   "domoticz/out";      // Nom du topic envoyé par Domoticz
+char*       topicOut =  "domoticz/in";       // Nom du topic écouté par Domoticz
+int         idxDevice = 42;                  // Index du device dans Domoticz.
+const char* mqtt_server = "MQTT_BROKER_IP";  // Adresse IP ou DNS du Broker MQTT.
+const int   mqtt_port = 1883;                // Port du Brocker MQTT
+const char* mqtt_login = "MQTT_LOGIN";       // Login de connexion à MQTT.
+const char* mqtt_password = "MQTT_PASSWD";   // Mot de passe de connexion à MQTT.
 
 // -------------------------------------------------------------
 // Définitions liées au WIFI
 // -------------------------------------------------------------
-const char* ssid = "WIFI_SSID";             // SSID du réseau Wifi
-const char* password = "WIFI_PASSWD";     // Mot de passe du réseau Wifi.
+const char* ssid = "WIFI_SSID";              // SSID du réseau Wifi
+const char* password = "WIFI_PASSWD";        // Mot de passe du réseau Wifi.
 
 // ------------------------------------------------------------
 // Variables globales
@@ -94,11 +94,12 @@ void loop() {
     setup_wifi();
     
   if (!client.connected()) {
-    Serial.println("MQTT déconnecté, on reconnecte !");
+    // Serial.println("Connexion au serveur MQTT");
     reconnect();
   } else {    
     getTempHum();             // On interroge la sonde de Température / Humidité.
     SendData();               // Envoi de la données via JSON et MQTT
+    Serial.printf("Pause de %d secondes\n", tempsPause);
     delay(tempsPause * 1000); // On met le système en pause pour un temps défini
   }
 }
@@ -108,17 +109,40 @@ void loop() {
 void setup_wifi() {
   
   // Connexion au réseau Wifi
-  delay(10);
+  // delay(10);
   Serial.println();
-  Serial.print("Connection au réseau : ");
-  Serial.println(ssid);
+  Serial.print("Connexion au point d'accès Wifi '");
+  Serial.print(ssid);
+  Serial.println("'");
 
+  WiFi.mode(WIFI_STA);
+  // Serial.printf("Wi-Fi mode réglé sur WIFI_STA %s\n", WiFi.mode(WIFI_STA) ? "" : "Echec!");
   WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED) {
+  int wifi_status = WiFi.status();
+  while ( wifi_status != WL_CONNECTED) {
+    // Serial.printf("Connection status: %d\n", wifi_status);
+    if( wifi_status == WL_NO_SSID_AVAIL) {
+      Serial.println("");
+      Serial.println("*** Point d'accès Wifi inaccessible");
+      return;
+    }
+    if( wifi_status == WL_CONNECT_FAILED) {
+      Serial.println("");
+      Serial.println("*** Echec de la connexion Wifi");
+      return;
+    }
+    /*
+    if( wifi_status == WL_CONNECT_WRONG_PASSWORD) {
+      Serial.println("");
+      Serial.print("Wifi password is incorrect");
+      return;
+    }
+    */
     // Tant que l'on est pas connecté, on boucle.
     delay(500);
     Serial.print(".");
+    wifi_status = WiFi.status();
   }
 
   Serial.println("");
@@ -134,9 +158,9 @@ void reconnect() {
   // Initialise la séquence Random
   randomSeed(micros());
   
-  Serial.print("Tentative de connexion MQTT...");
+  Serial.print("Connexion au serveur MQTT...");
   // Création d'un ID client aléatoire
-  String clientId = "ESP8266Client-";
+  String clientId = "TempIOT-";
   clientId += String(random(0xffff), HEX);
     
   // Tentative de connexion
@@ -184,7 +208,7 @@ void getTempHum() {
   // On vérifie que le relevé est valide.
   if (isnan(valTemp_T)) {
     // La valeur retournée n'es pas valide (isnan = is Not A Number).
-    Serial.println("Erreur lors du relevé de température, on conserve l'ancienne valeur !");
+    Serial.println("*** Erreur lors du relevé de la température");
   } else {
     Serial.print("Valeur de température relevée : ");
     Serial.println(valTemp_T);
@@ -196,7 +220,7 @@ void getTempHum() {
   valHum_T = dht.readHumidity();            // Lecture de l'humidité (en %)
   if (isnan(valHum_T)) {
   // La valeur retournée n'es pas valide (isnan = is Not A Number).
-    Serial.println("Erreur lors du relevé de l'humidité, on conserve l'ancienne valeur !");
+    Serial.println("*** Erreur lors du relevé de l'humidité");
   } else {
     Serial.print("Valeur d'humidité relevée : ");
     Serial.println(valHum_T);
@@ -227,10 +251,12 @@ void SendData () {
   String JsonStr;
   serializeJson(root, JsonStr);
   
-  Serial.println(JsonStr);
+  // Serial.println(JsonStr);
   
   char JsonStrChar[JsonStr.length()+1];
   JsonStr.toCharArray(JsonStrChar,JsonStr.length()+1);
   client.publish(topicOut, JsonStrChar);
-  Serial.println("Message envoyé à Domoticz");
+  
+  Serial.print("Message envoyé : ");
+  Serial.println(JsonStr);
 }
