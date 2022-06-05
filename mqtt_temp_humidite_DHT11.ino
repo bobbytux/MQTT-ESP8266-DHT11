@@ -84,6 +84,7 @@ void setup() {
 
   client.setBufferSize(512);
   client.setServer(mqtt_server, mqtt_port);   // On défini la connexion MQTT
+  client.setKeepAlive(tempsPause+1);
 }
 
 // BOUCLE DE TRAVAIL
